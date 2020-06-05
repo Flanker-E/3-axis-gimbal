@@ -20,6 +20,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "adc.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -36,6 +37,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+Serial_Transmit_Stream_typeDef serial_data;
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -46,7 +48,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-Serial_Transmit_Stream_typeDef serial_data;
+uint16_t ADC2_Value = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -76,7 +78,7 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-
+  
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -89,6 +91,7 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART3_UART_Init();
+  MX_ADC2_Init();
   /* USER CODE BEGIN 2 */
   
   //PB12 Led0 green
@@ -109,8 +112,10 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  HAL_ADC_Start(&hadc2);
   while (1)
   {
+    
     //PB12 Led0 green
     HAL_GPIO_WritePin(GPIOB,GPIO_PIN_12,SET);
     HAL_Delay(200);
@@ -118,12 +123,22 @@ int main(void)
     HAL_GPIO_WritePin(GPIOB,GPIO_PIN_12,RESET);
     HAL_Delay(20);
     //Reset is pull-down
+    
+    HAL_ADC_PollForConversion(&hadc2, 50);
 
+    /* Check if the continous conversion of regular channel is finished */  
+    if(HAL_IS_BIT_SET(HAL_ADC_GetState(&hadc2), HAL_ADC_STATE_REG_EOC)) 
+      {
+          /*##-3- Get the converted value of regular channel  ######################*/
+          ADC2_Value = HAL_ADC_GetValue(&hadc2);
+          printf("Voltage: %1.3f V \r\n",ADC2_Value*0.0061767578125); //分压还原0.00617=3.3/4096*11.5/1.5
+      }
+    //HAL_Delay(1000);
     // serial_data.test_char='test';
     // serial_data.time_stamp = HAL_GetTick();//get current time
     // SerialPrintTransmit(&serial_data);
     // HAL_Delay(200);
-    printf("12345\r\n");
+    // printf("12345\r\n");
 
     //PB13 Led1 red
     HAL_GPIO_WritePin(GPIOB,GPIO_PIN_13,SET);
@@ -146,6 +161,7 @@ void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 
   /** Initializes the CPU, AHB and APB busses clocks 
   */
@@ -170,6 +186,12 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_ADC;
+  PeriphClkInit.AdcClockSelection = RCC_ADCPCLK2_DIV8;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
   {
     Error_Handler();
   }
