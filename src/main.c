@@ -25,7 +25,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-//#include "serial_print.h"
+#include "stdio.h"
+#include "serial_print.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -45,7 +46,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-//Serial_Transmit_Stream_typeDef serial_data;
+Serial_Transmit_Stream_typeDef serial_data;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -89,7 +90,21 @@ int main(void)
   MX_GPIO_Init();
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
-
+  
+  //PB12 Led0 green
+  HAL_GPIO_WritePin(GPIOB,GPIO_PIN_12,SET);
+  HAL_Delay(2000);
+  //Set is pull-up
+  HAL_GPIO_WritePin(GPIOB,GPIO_PIN_12,RESET);
+  HAL_Delay(500);
+  //Reset is pull-down
+  serial_data.end1 = '\r';
+  serial_data.end2 = '\n';
+  //added in the end of data
+  serial_data.test_float=123.0;
+  //serial_data.time_stamp = HAL_GetTick();//get current time
+  SerialPrintTransmit(&serial_data);
+  HAL_Delay(200);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -98,16 +113,24 @@ int main(void)
   {
     //PB12 Led0 green
     HAL_GPIO_WritePin(GPIOB,GPIO_PIN_12,SET);
-    HAL_Delay(2000);
+    HAL_Delay(200);
     //Set is pull-up
     HAL_GPIO_WritePin(GPIOB,GPIO_PIN_12,RESET);
-    HAL_Delay(500);
+    HAL_Delay(20);
     //Reset is pull-down
+
+    // serial_data.test_char='test';
+    // serial_data.time_stamp = HAL_GetTick();//get current time
+    // SerialPrintTransmit(&serial_data);
+    // HAL_Delay(200);
+    printf("12345\r\n");
+
     //PB13 Led1 red
     HAL_GPIO_WritePin(GPIOB,GPIO_PIN_13,SET);
-    HAL_Delay(2000);
+    HAL_Delay(200);
     HAL_GPIO_WritePin(GPIOB,GPIO_PIN_13,RESET);
-    HAL_Delay(500);
+    HAL_Delay(20);
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
