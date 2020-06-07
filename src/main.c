@@ -21,6 +21,8 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "adc.h"
+#include "i2c.h"
+#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -28,6 +30,10 @@
 /* USER CODE BEGIN Includes */
 #include "stdio.h"
 #include "serial_print.h"
+#include "sine_wave.h"
+#include "motor_define.h"
+#include "SVPWM.h"
+#include "MPU6050.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -69,7 +75,9 @@ void SystemClock_Config(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
+  float angle = 0;
+  float motor_v = 2.5;
+  float yaw, roll, pitch;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -92,7 +100,19 @@ int main(void)
   MX_GPIO_Init();
   MX_USART3_UART_Init();
   MX_ADC2_Init();
+  MX_I2C2_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
+  HAL_TIM_PWM_Start(&htim3,TIM_CHANNEL_2);
+  HAL_TIM_PWM_Start(&htim3,TIM_CHANNEL_3);
+  HAL_TIM_PWM_Start(&htim3,TIM_CHANNEL_4);
+
+  /*MPU6050???*/
+  while (init_MPU6050_DMP(&hi2c2))
+  {
+    printf("MPU6050 DMP init error!\r\n");
+    HAL_Delay(50);
+  }
   
   //PB12 Led0 green
   HAL_GPIO_WritePin(GPIOB,GPIO_PIN_12,SET);
@@ -101,18 +121,18 @@ int main(void)
   HAL_GPIO_WritePin(GPIOB,GPIO_PIN_12,RESET);
   HAL_Delay(500);
   //Reset is pull-down
-  serial_data.end1 = '\r';
-  serial_data.end2 = '\n';
+  // serial_data.end1 = '\r';
+  // serial_data.end2 = '\n';
   //added in the end of data
-  serial_data.test_float=123.0;
+  //serial_data.test_float=123.0;
   //serial_data.time_stamp = HAL_GetTick();//get current time
-  SerialPrintTransmit(&serial_data);
-  HAL_Delay(200);
+  // SerialPrintTransmit(&serial_data);
+  // HAL_Delay(200);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  HAL_ADC_Start(&hadc2);
+  
   while (1)
   {
     
@@ -124,14 +144,20 @@ int main(void)
     HAL_Delay(20);
     //Reset is pull-down
     
-    HAL_ADC_PollForConversion(&hadc2, 50);
+    while (mpu_dmp_get_data(&pitch, &roll, &yaw));//?????????
+    printf("------------MPU6050-------------\r\n");
+    printf("yaw:%.2f\troll:%.2f\tpitch:%.2f\r\n", yaw, roll, pitch);
+    printf("--------------------------------\r\n");
 
+    HAL_ADC_Start(&hadc2);//????????????adc????
+    HAL_ADC_PollForConversion(&hadc2, 50);
     /* Check if the continous conversion of regular channel is finished */  
     if(HAL_IS_BIT_SET(HAL_ADC_GetState(&hadc2), HAL_ADC_STATE_REG_EOC)) 
       {
           /*##-3- Get the converted value of regular channel  ######################*/
           ADC2_Value = HAL_ADC_GetValue(&hadc2);
-          printf("Voltage: %1.3f V \r\n",ADC2_Value*0.0061767578125); //分压还原0.00617=3.3/4096*11.5/1.5
+          printf("Voltage: %1.3f V \r\n",ADC2_Value*0.0061767578125); 
+          /*voltage coefficient?0.00617=3.3/4096*11.5/1.5?comes from divided voltage compared to VCC*/
       }
     //HAL_Delay(1000);
     // serial_data.test_char='test';
