@@ -55,6 +55,7 @@ Serial_Transmit_Stream_typeDef serial_data;
 
 /* USER CODE BEGIN PV */
 uint16_t ADC2_Value = 0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -102,25 +103,38 @@ int main(void)
   MX_ADC2_Init();
   MX_I2C2_Init();
   MX_TIM3_Init();
+  MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_PWM_Start(&htim3,TIM_CHANNEL_2);
   HAL_TIM_PWM_Start(&htim3,TIM_CHANNEL_3);
   HAL_TIM_PWM_Start(&htim3,TIM_CHANNEL_4);
 
-  /*MPU6050???*/
-  while (init_MPU6050_DMP(&hi2c2))
-  {
-    printf("MPU6050 DMP init error!\r\n");
-    HAL_Delay(50);
-  }
-  
-  //PB12 Led0 green
+   //PB12 Led0 green
   HAL_GPIO_WritePin(GPIOB,GPIO_PIN_12,SET);
   HAL_Delay(2000);
   //Set is pull-up
   HAL_GPIO_WritePin(GPIOB,GPIO_PIN_12,RESET);
   HAL_Delay(500);
   //Reset is pull-down
+
+  /*Onboard_MPU6050*/
+  is_using_onboard_mpu=1;
+  /*global variable which indicates the in use mpu*/
+  /*when set to 1,the address whould be plused to reach the other mpu*/
+  while (init_MPU6050_DMP(&hi2c1))
+  {
+    printf("Onboard_MPU6050 DMP init error!\r\n");
+    HAL_Delay(50);
+  }
+  /*External_MPU6050*/
+  is_using_onboard_mpu=0;
+  while (init_MPU6050_DMP(&hi2c2))
+  {
+    printf("External_MPU6050 DMP init error!\r\n");
+    HAL_Delay(50);
+  }
+  
+
   // serial_data.end1 = '\r';
   // serial_data.end2 = '\n';
   //added in the end of data
@@ -143,13 +157,20 @@ int main(void)
     HAL_GPIO_WritePin(GPIOB,GPIO_PIN_12,RESET);
     HAL_Delay(20);
     //Reset is pull-down
-    
-    while (mpu_dmp_get_data(&pitch, &roll, &yaw));//?????????
-    printf("------------MPU6050-------------\r\n");
+
+    is_using_onboard_mpu=0;
+    MPU6050_I2C = &hi2c2;
+    while (mpu_dmp_get_data(&pitch, &roll, &yaw));//get data from mpu#2
+    printf("------------External_MPU6050-------------\r\n");
+    printf("yaw:%.2f\troll:%.2f\tpitch:%.2f\r\n", yaw, roll, pitch);
+    is_using_onboard_mpu=1;
+    MPU6050_I2C = &hi2c1;
+    while (mpu_dmp_get_data(&pitch, &roll, &yaw));//get data from mpu#1
+    printf("------------Onboard_MPU6050-------------\r\n");
     printf("yaw:%.2f\troll:%.2f\tpitch:%.2f\r\n", yaw, roll, pitch);
     printf("--------------------------------\r\n");
 
-    HAL_ADC_Start(&hadc2);//????????????adc????
+    HAL_ADC_Start(&hadc2);//Activate adc conversion. If isn't executed, adc can't get new value
     HAL_ADC_PollForConversion(&hadc2, 50);
     /* Check if the continous conversion of regular channel is finished */  
     if(HAL_IS_BIT_SET(HAL_ADC_GetState(&hadc2), HAL_ADC_STATE_REG_EOC)) 

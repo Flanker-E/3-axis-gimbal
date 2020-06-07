@@ -135,5 +135,6 @@ int mpu_run_self_test(long *gyro, long *accel);
 int mpu_register_tap_cb(void (*func)(unsigned char, unsigned char));
 void mget_ms(unsigned long *time);
 
+extern uint8_t is_using_onboard_mpu;
 #endif  /* #ifndef _INV_MPU_H_ */
 
