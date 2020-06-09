@@ -24,7 +24,7 @@ HAL_StatusTypeDef SerialPrintReceive(const Serial_Receive_Stream_typeDef *data)
     return HAL_UART_Transmit(&huart3, (uint8_t *)data, sizeof(Serial_Transmit_Stream_typeDef), 0xffff);
 }
 
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) //GUI parameters' interrupt
 {
     if (huart->Instance == USART3)
     {

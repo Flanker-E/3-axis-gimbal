@@ -32,7 +32,14 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
- 
+#define FRAME_COUNT   1000      //count for 1s
+
+#define COUNT_500HZ   2         // Number of 1000 Hz frames for 500 Hz Loop
+#define COUNT_100HZ   10        // Number of 1000 Hz frames for 100 Hz Loop
+#define COUNT_50HZ    20        // Number of 1000 Hz frames for  50 Hz Loop
+#define COUNT_10HZ    100       // Number of 1000 Hz frames for  10 Hz Loop
+#define COUNT_5HZ     200       // Number of 1000 Hz frames for   5 Hz Loop
+#define COUNT_1HZ     1000      // Number of 1000 Hz frames for   1 Hz Loop
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -42,7 +49,23 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
+uint16_t frameCounter = 0;//1ms each frame
+uint8_t frame_500Hz = 0;
+uint8_t frame_100Hz = 0;
+uint8_t frame_50Hz  = 0;
+uint8_t frame_10Hz  = 0;
+uint8_t frame_5Hz   = 0;
+uint8_t frame_1Hz   = 0; 
 
+uint32_t deltaTime1000Hz, executionTime1000Hz, previous1000HzTime=0;
+uint32_t deltaTime500Hz,  executionTime500Hz,  previous500HzTime=0;
+uint32_t deltaTime100Hz,  executionTime100Hz,  previous100HzTime=0;
+uint32_t deltaTime50Hz,   executionTime50Hz,   previous50HzTime=0;
+uint32_t deltaTime10Hz,   executionTime10Hz,   previous10HzTime=0;
+uint32_t deltaTime5Hz,    executionTime5Hz,    previous5HzTime=0;
+uint32_t deltaTime1Hz,    executionTime1Hz,    previous1HzTime=0;
+
+uint32_t currentTime=0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -182,10 +205,31 @@ void PendSV_Handler(void)
 void SysTick_Handler(void)
 {
   /* USER CODE BEGIN SysTick_IRQn 0 */
+  currentTime = HAL_GetTick();
+  deltaTime1000Hz = currentTime - previous1000HzTime;
+  previous1000HzTime = currentTime;
 
+  frameCounter++;
+  if (frameCounter > FRAME_COUNT)
+  {
+    frameCounter = 1;
+  }
+  if ((frameCounter % COUNT_500HZ) == 0)
+  {
+    frame_500Hz = 1;
+  }
+  if ((frameCounter % COUNT_100HZ) == 0)
+  {
+    frame_100Hz = 1;
+  }
+  if ((frameCounter % COUNT_1HZ) == 0)
+  {
+    frame_1Hz = 1;
+  }
   /* USER CODE END SysTick_IRQn 0 */
   HAL_IncTick();
   /* USER CODE BEGIN SysTick_IRQn 1 */
+  executionTime1000Hz = HAL_GetTick() - currentTime;
 
   /* USER CODE END SysTick_IRQn 1 */
 }

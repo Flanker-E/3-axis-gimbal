@@ -33,7 +33,23 @@
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
+extern uint16_t frameCounter ;
+extern uint8_t frame_500Hz ;
+extern uint8_t frame_100Hz ;
+extern uint8_t frame_50Hz  ;
+extern uint8_t frame_10Hz  ;
+extern uint8_t frame_5Hz   ;
+extern uint8_t frame_1Hz   ; 
 
+extern uint32_t deltaTime1000Hz, executionTime1000Hz, previous1000HzTime;
+extern uint32_t deltaTime500Hz,  executionTime500Hz,  previous500HzTime;
+extern uint32_t deltaTime100Hz,  executionTime100Hz,  previous100HzTime;
+extern uint32_t deltaTime50Hz,   executionTime50Hz,   previous50HzTime;
+extern uint32_t deltaTime10Hz,   executionTime10Hz,   previous10HzTime;
+extern uint32_t deltaTime5Hz,    executionTime5Hz,    previous5HzTime;
+extern uint32_t deltaTime1Hz,    executionTime1Hz,    previous1HzTime;
+
+extern uint32_t currentTime;
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/

@@ -34,6 +34,7 @@
 #include "motor_define.h"
 #include "SVPWM.h"
 #include "MPU6050.h"
+#include "stm32f1xx_it.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -79,6 +80,8 @@ int main(void)
   float angle = 0;
   float motor_v = 2.5;
   float yaw, roll, pitch;
+  uint8_t delay_count=0;
+  uint32_t delay_time=0;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -105,9 +108,9 @@ int main(void)
   MX_TIM3_Init();
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
-  HAL_TIM_PWM_Start(&htim3,TIM_CHANNEL_2);
-  HAL_TIM_PWM_Start(&htim3,TIM_CHANNEL_3);
-  HAL_TIM_PWM_Start(&htim3,TIM_CHANNEL_4);
+  // HAL_TIM_PWM_Start(&htim3,TIM_CHANNEL_2);
+  // HAL_TIM_PWM_Start(&htim3,TIM_CHANNEL_3);
+  // HAL_TIM_PWM_Start(&htim3,TIM_CHANNEL_4);
 
    //PB12 Led0 green
   HAL_GPIO_WritePin(GPIOB,GPIO_PIN_12,SET);
@@ -118,14 +121,14 @@ int main(void)
   //Reset is pull-down
 
   /*Onboard_MPU6050*/
-  is_using_onboard_mpu=1;
-  /*global variable which indicates the in use mpu*/
-  /*when set to 1,the address whould be plused to reach the other mpu*/
-  while (init_MPU6050_DMP(&hi2c1))
-  {
-    printf("Onboard_MPU6050 DMP init error!\r\n");
-    HAL_Delay(50);
-  }
+  // is_using_onboard_mpu=1;
+  // /*global variable which indicates the in use mpu*/
+  // /*when set to 1,the address whould be plused to reach the other mpu*/
+  // while (init_MPU6050_DMP(&hi2c1))
+  // {
+  //   printf("Onboard_MPU6050 DMP init error!\r\n");
+  //   HAL_Delay(50);
+  // }
   /*External_MPU6050*/
   is_using_onboard_mpu=0;
   while (init_MPU6050_DMP(&hi2c2))
@@ -135,8 +138,8 @@ int main(void)
   }
   
 
-  // serial_data.end1 = '\r';
-  // serial_data.end2 = '\n';
+  serial_data.end1 = '\r';
+  serial_data.end2 = '\n';
   //added in the end of data
   //serial_data.test_float=123.0;
   //serial_data.time_stamp = HAL_GetTick();//get current time
@@ -151,47 +154,83 @@ int main(void)
   {
     
     //PB12 Led0 green
-    HAL_GPIO_WritePin(GPIOB,GPIO_PIN_12,SET);
-    HAL_Delay(200);
-    //Set is pull-up
-    HAL_GPIO_WritePin(GPIOB,GPIO_PIN_12,RESET);
-    HAL_Delay(20);
+    // HAL_GPIO_WritePin(GPIOB,GPIO_PIN_12,SET);
+    // HAL_Delay(200);
+    // //Set is pull-up
+    // HAL_GPIO_WritePin(GPIOB,GPIO_PIN_12,RESET);
+    // HAL_Delay(20);
     //Reset is pull-down
 
-    is_using_onboard_mpu=0;
-    MPU6050_I2C = &hi2c2;
-    while (mpu_dmp_get_data(&pitch, &roll, &yaw));//get data from mpu#2
-    printf("------------External_MPU6050-------------\r\n");
-    printf("yaw:%.2f\troll:%.2f\tpitch:%.2f\r\n", yaw, roll, pitch);
-    is_using_onboard_mpu=1;
-    MPU6050_I2C = &hi2c1;
-    while (mpu_dmp_get_data(&pitch, &roll, &yaw));//get data from mpu#1
-    printf("------------Onboard_MPU6050-------------\r\n");
-    printf("yaw:%.2f\troll:%.2f\tpitch:%.2f\r\n", yaw, roll, pitch);
-    printf("--------------------------------\r\n");
-
-    HAL_ADC_Start(&hadc2);//Activate adc conversion. If isn't executed, adc can't get new value
-    HAL_ADC_PollForConversion(&hadc2, 50);
-    /* Check if the continous conversion of regular channel is finished */  
-    if(HAL_IS_BIT_SET(HAL_ADC_GetState(&hadc2), HAL_ADC_STATE_REG_EOC)) 
+    if(frame_1Hz==1)//toggle green and send temp. each second
+    { 
+      frame_1Hz=0;
+      HAL_GPIO_TogglePin(GPIOB,GPIO_PIN_12);
+      HAL_ADC_Start(&hadc2);//Activate adc conversion. If isn't executed, adc can't get new value
+      HAL_ADC_PollForConversion(&hadc2, 50);
+      /* Check if the continous conversion of regular channel is finished */  
+      if(HAL_IS_BIT_SET(HAL_ADC_GetState(&hadc2), HAL_ADC_STATE_REG_EOC)) 
       {
-          /*##-3- Get the converted value of regular channel  ######################*/
-          ADC2_Value = HAL_ADC_GetValue(&hadc2);
-          printf("Voltage: %1.3f V \r\n",ADC2_Value*0.0061767578125); 
-          /*voltage coefficient?0.00617=3.3/4096*11.5/1.5?comes from divided voltage compared to VCC*/
+        /*##-3- Get the converted value of regular channel  ######################*/
+        ADC2_Value = HAL_ADC_GetValue(&hadc2);
+        printf("Voltage: %1.3f V \r\n",ADC2_Value*0.0061767578125); 
+        /*voltage coefficient?0.00617=3.3/4096*11.5/1.5?comes from divided voltage compared to VCC*/
       }
-    //HAL_Delay(1000);
-    // serial_data.test_char='test';
-    // serial_data.time_stamp = HAL_GetTick();//get current time
-    // SerialPrintTransmit(&serial_data);
-    // HAL_Delay(200);
+    }
+
+    if(frame_500Hz==1)
+    {
+      frame_500Hz=0;
+
+      currentTime       = HAL_GetTick();//get current time
+      deltaTime500Hz    = currentTime - previous500HzTime;//time between loop
+      previous500HzTime = currentTime;//record time before functions
+
+      is_using_onboard_mpu=0;
+      MPU6050_I2C = &hi2c2;
+      while (mpu_dmp_get_data(&pitch, &roll, &yaw));//get data from mpu#2
+      if(delay_count!=0)//ignore start up time
+      {
+      delay_time+=executionTime500Hz;
+      }
+      delay_count++;
+      if(delay_count==251)
+      {
+        delay_count=0;
+        printf("------------External_MPU6050-------------\r\n");
+        printf("yaw:%.2f\troll:%.2f\tpitch:%.2f\r\n", yaw, roll, pitch);
+        printf("consume time:%.2f\r\n",((float)delay_time)/250);
+        delay_time=0;
+      }
+      // // is_using_onboard_mpu=1;
+      // MPU6050_I2C = &hi2c1;
+      // while (mpu_dmp_get_data(&pitch, &roll, &yaw));//get data from mpu#1
+      // printf("------------Onboard_MPU6050-------------\r\n");
+      // printf("yaw:%.2f\troll:%.2f\tpitch:%.2f\r\n", yaw, roll, pitch);
+      // printf("--------------------------------\r\n");
+      serial_data.pitch=pitch;
+      serial_data.roll=roll;
+      serial_data.yaw=yaw;
+      serial_data.time_stamp = HAL_GetTick();//get current time
+      SerialPrintTransmit(&serial_data);
+      // HAL_Delay(200);
+      executionTime500Hz = HAL_GetTick() - currentTime;//save this execute time to executionTime500Hz
+    }
+
+    if(frame_100Hz==1)
+    {
+      frame_100Hz=0;
+      
+      //HAL_Delay(1000);
+    }
+    
+    
     // printf("12345\r\n");
 
     //PB13 Led1 red
-    HAL_GPIO_WritePin(GPIOB,GPIO_PIN_13,SET);
-    HAL_Delay(200);
-    HAL_GPIO_WritePin(GPIOB,GPIO_PIN_13,RESET);
-    HAL_Delay(20);
+    // HAL_GPIO_WritePin(GPIOB,GPIO_PIN_13,SET);
+    // HAL_Delay(200);
+    // HAL_GPIO_WritePin(GPIOB,GPIO_PIN_13,RESET);
+    // HAL_Delay(20);
 
     /* USER CODE END WHILE */
 
