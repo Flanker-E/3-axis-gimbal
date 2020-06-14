@@ -65,7 +65,7 @@ uint32_t deltaTime10Hz,   executionTime10Hz,   previous10HzTime=0;
 uint32_t deltaTime5Hz,    executionTime5Hz,    previous5HzTime=0;
 uint32_t deltaTime1Hz,    executionTime1Hz,    previous1HzTime=0;
 
-uint32_t currentTime=0;
+//uint32_t currentTime=0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -79,7 +79,7 @@ uint32_t currentTime=0;
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
-
+extern UART_HandleTypeDef huart3;
 /* USER CODE BEGIN EV */
 
 /* USER CODE END EV */
@@ -205,9 +205,9 @@ void PendSV_Handler(void)
 void SysTick_Handler(void)
 {
   /* USER CODE BEGIN SysTick_IRQn 0 */
-  currentTime = HAL_GetTick();
-  deltaTime1000Hz = currentTime - previous1000HzTime;
-  previous1000HzTime = currentTime;
+  // currentTime = HAL_GetTick();
+  // deltaTime1000Hz = currentTime - previous1000HzTime;
+  // previous1000HzTime = currentTime;
 
   frameCounter++;
   if (frameCounter > FRAME_COUNT)
@@ -229,7 +229,7 @@ void SysTick_Handler(void)
   /* USER CODE END SysTick_IRQn 0 */
   HAL_IncTick();
   /* USER CODE BEGIN SysTick_IRQn 1 */
-  executionTime1000Hz = HAL_GetTick() - currentTime;
+  //executionTime1000Hz = HAL_GetTick() - currentTime;
 
   /* USER CODE END SysTick_IRQn 1 */
 }
@@ -240,6 +240,20 @@ void SysTick_Handler(void)
 /* For the available peripheral interrupt handler names,                      */
 /* please refer to the startup file (startup_stm32f1xx.s).                    */
 /******************************************************************************/
+
+/**
+  * @brief This function handles USART3 global interrupt.
+  */
+void USART3_IRQHandler(void)
+{
+  /* USER CODE BEGIN USART3_IRQn 0 */
+
+  /* USER CODE END USART3_IRQn 0 */
+  HAL_UART_IRQHandler(&huart3);
+  /* USER CODE BEGIN USART3_IRQn 1 */
+
+  /* USER CODE END USART3_IRQn 1 */
+}
 
 /* USER CODE BEGIN 1 */
 

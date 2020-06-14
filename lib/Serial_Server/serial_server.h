@@ -1,9 +1,8 @@
-#ifndef _SERIAL_PRINT_H
-#define _SERIAL_PRINT_H
+#ifndef _SERIAL_SERVER_H
+#define _SERIAL_SERVER_H
 
 #include "stm32f1xx_hal.h"
-//#include "as5600.h"
-#include "sine_wave.h"
+
 #pragma pack(1)
 typedef struct
 {

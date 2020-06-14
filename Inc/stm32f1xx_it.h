@@ -49,7 +49,7 @@ extern uint32_t deltaTime10Hz,   executionTime10Hz,   previous10HzTime;
 extern uint32_t deltaTime5Hz,    executionTime5Hz,    previous5HzTime;
 extern uint32_t deltaTime1Hz,    executionTime1Hz,    previous1HzTime;
 
-extern uint32_t currentTime;
+//extern uint32_t currentTime;
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
@@ -72,6 +72,7 @@ void SVC_Handler(void);
 void DebugMon_Handler(void);
 void PendSV_Handler(void);
 void SysTick_Handler(void);
+void USART3_IRQHandler(void);
 /* USER CODE BEGIN EFP */
 
 /* USER CODE END EFP */

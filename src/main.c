@@ -29,7 +29,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "stdio.h"
-#include "serial_print.h"
+#include "serial_server.h"
 #include "sine_wave.h"
 #include "motor_define.h"
 #include "SVPWM.h"
@@ -56,6 +56,10 @@ Serial_Transmit_Stream_typeDef serial_data;
 
 /* USER CODE BEGIN PV */
 uint16_t ADC2_Value = 0;
+static float P=90.0;
+static float I=0.0;
+static float D=100.0;
+//__IO uint32_t currentTicks = 0;
 
 /* USER CODE END PV */
 
@@ -67,7 +71,9 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+// P=90;
+// I=0;
+// D=100;
 /* USER CODE END 0 */
 
 /**
@@ -77,9 +83,10 @@ void SystemClock_Config(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-  float angle = 0;
-  float motor_v = 2.5;
+  // float angle = 0;
+  // float motor_v = 2.5;
   float yaw, roll, pitch;
+  
   uint8_t delay_count=0;
   uint32_t delay_time=0;
   /* USER CODE END 1 */
@@ -108,6 +115,23 @@ int main(void)
   MX_TIM3_Init();
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
+  InitSerialPrintReceiveIT(&uart3_it,&huart3);
+  HAL_UART_Receive_IT(uart3_it.uart,&(uart3_it.tmp_buff),1);
+  // initiate client's PID value
+  serial_data.end1 = '\r';
+  serial_data.end2 = '\n';
+  serial_data.time_stamp = ((uint32_t)0);
+  serial_data.yaw = (float)P;
+  serial_data.roll = (float)I;
+  serial_data.pitch = (float)D;
+  for(int i=0;i<3;i++)
+  {
+  SerialPrintTransmit(&serial_data);
+  HAL_Delay(50);
+  }
+
+  /* Number of ticks per millisecond */
+  const uint32_t tickPerMs = SysTick->LOAD + 1;
   // HAL_TIM_PWM_Start(&htim3,TIM_CHANNEL_2);
   // HAL_TIM_PWM_Start(&htim3,TIM_CHANNEL_3);
   // HAL_TIM_PWM_Start(&htim3,TIM_CHANNEL_4);
@@ -131,15 +155,14 @@ int main(void)
   // }
   /*External_MPU6050*/
   is_using_onboard_mpu=0;
-  while (init_MPU6050_DMP(&hi2c2))
-  {
-    printf("External_MPU6050 DMP init error!\r\n");
-    HAL_Delay(50);
-  }
+  // while (init_MPU6050_DMP(&hi2c2))
+  // {
+  //   printf("External_MPU6050 DMP init error!\r\n");
+  //   HAL_Delay(50);
+  // }
   
 
-  serial_data.end1 = '\r';
-  serial_data.end2 = '\n';
+ 
   //added in the end of data
   //serial_data.test_float=123.0;
   //serial_data.time_stamp = HAL_GetTick();//get current time
@@ -152,7 +175,17 @@ int main(void)
   
   while (1)
   {
-    
+    if(uart3_it.is_compelete){
+      uart3_it.is_compelete = 0;
+      // updateEncoder(&roll_encoder);
+      serial_data.time_stamp = uart3_it.data.time_stamp;
+      serial_data.yaw = uart3_it.data.yaw;
+      serial_data.roll = uart3_it.data.roll;
+      serial_data.pitch = uart3_it.data.pitch;
+      SerialPrintTransmit(&serial_data);
+      printf("transmited_to_client");
+      HAL_GPIO_TogglePin(GPIOB,GPIO_PIN_12);
+    }
     //PB12 Led0 green
     // HAL_GPIO_WritePin(GPIOB,GPIO_PIN_12,SET);
     // HAL_Delay(200);
@@ -172,7 +205,7 @@ int main(void)
       {
         /*##-3- Get the converted value of regular channel  ######################*/
         ADC2_Value = HAL_ADC_GetValue(&hadc2);
-        printf("Voltage: %1.3f V \r\n",ADC2_Value*0.0061767578125); 
+        //printf("Voltage: %1.3f V \r\n",ADC2_Value*0.0061767578125); 
         /*voltage coefficient?0.00617=3.3/4096*11.5/1.5?comes from divided voltage compared to VCC*/
       }
     }
@@ -181,45 +214,49 @@ int main(void)
     {
       frame_500Hz=0;
 
-      currentTime       = HAL_GetTick();//get current time
-      deltaTime500Hz    = currentTime - previous500HzTime;//time between loop
-      previous500HzTime = currentTime;//record time before functions
+      __IO uint32_t currentTicks = SysTick->VAL;
+      //currentTicks       = SysTick->VAL;//get current time
+      //deltaTime500Hz    = currentTicks - previous500HzTime;//time between loop
+      previous500HzTime = currentTicks;//record time before functions
 
-      is_using_onboard_mpu=0;
-      MPU6050_I2C = &hi2c2;
-      while (mpu_dmp_get_data(&pitch, &roll, &yaw));//get data from mpu#2
-      if(delay_count!=0)//ignore start up time
-      {
-      delay_time+=executionTime500Hz;
-      }
-      delay_count++;
-      if(delay_count==251)
-      {
-        delay_count=0;
-        printf("------------External_MPU6050-------------\r\n");
-        printf("yaw:%.2f\troll:%.2f\tpitch:%.2f\r\n", yaw, roll, pitch);
-        printf("consume time:%.2f\r\n",((float)delay_time)/250);
-        delay_time=0;
-      }
+      // is_using_onboard_mpu=0;
+      // MPU6050_I2C = &hi2c2;
+      // while (mpu_dmp_get_data(&pitch, &roll, &yaw));//get data from mpu#2
+      // if(delay_count!=0)//ignore printf time
+      // {
+      // delay_time+=executionTime500Hz;
+      // }
+      // delay_count++;
+      // if(delay_count==101)
+      // {
+      //   delay_count=0;
+      //   printf("------------External_MPU6050-------------\r\n");
+      //   printf("yaw:%.2f\troll:%.2f\tpitch:%.2f\r\n", yaw, roll, pitch);
+      //   printf("consume time:%.2f\r\n",((float)delay_time)/100);
+      //   printf("tickperms:%d\r\n",tickPerMs);
+      //   delay_time=0;
+      // }
       // // is_using_onboard_mpu=1;
       // MPU6050_I2C = &hi2c1;
       // while (mpu_dmp_get_data(&pitch, &roll, &yaw));//get data from mpu#1
       // printf("------------Onboard_MPU6050-------------\r\n");
       // printf("yaw:%.2f\troll:%.2f\tpitch:%.2f\r\n", yaw, roll, pitch);
       // printf("--------------------------------\r\n");
-      serial_data.pitch=pitch;
-      serial_data.roll=roll;
-      serial_data.yaw=yaw;
-      serial_data.time_stamp = HAL_GetTick();//get current time
-      SerialPrintTransmit(&serial_data);
+      // serial_data.pitch=pitch;
+      // serial_data.roll=roll;
+      // serial_data.yaw=yaw;
+      // serial_data.time_stamp = HAL_GetTick();//get current time
+      // SerialPrintTransmit(&serial_data);
       // HAL_Delay(200);
-      executionTime500Hz = HAL_GetTick() - currentTime;//save this execute time to executionTime500Hz
+      currentTicks = SysTick->VAL;
+      executionTime500Hz = (previous500HzTime < currentTicks) ? tickPerMs + previous500HzTime - currentTicks :
+                    previous500HzTime - currentTicks;//save this execute time to executionTime500Hz
     }
 
     if(frame_100Hz==1)
     {
       frame_100Hz=0;
-      
+      HAL_UART_Receive_IT(uart3_it.uart,&(uart3_it.tmp_buff),1);
       //HAL_Delay(1000);
     }
     
