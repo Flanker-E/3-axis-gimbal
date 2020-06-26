@@ -59,6 +59,16 @@ uint16_t ADC2_Value = 0;
 static float P=90.0;
 static float I=0.0;
 static float D=100.0;
+static uint8_t motor_num=0;
+static float pitchPPara = 120.0;
+static float pitchIPara = 0.0;
+static float pitchDPara = 10.0;
+static float rollPPara = 120.0;
+static float rollIPara = 0.0;
+static float rollDPara = 10.0;
+static float yawPPara = 80.0;
+static float yawIPara = 0.0;
+static float yawDPara = 8.0;
 //__IO uint32_t currentTicks = 0;
 
 /* USER CODE END PV */
@@ -118,16 +128,41 @@ int main(void)
   InitSerialPrintReceiveIT(&uart3_it,&huart3);
   HAL_UART_Receive_IT(uart3_it.uart,&(uart3_it.tmp_buff),1);
   // initiate client's PID value
-  serial_data.end1 = '\r';
-  serial_data.end2 = '\n';
-  serial_data.time_stamp = ((uint32_t)0);
-  serial_data.yaw = (float)P;
-  serial_data.roll = (float)I;
-  serial_data.pitch = (float)D;
-  for(int i=0;i<3;i++)
+  uint8_t n=0;
+  while(n<3)
   {
-  SerialPrintTransmit(&serial_data);
-  HAL_Delay(50);
+    if (n==0)
+    {
+      serial_data.time_stamp = ((uint32_t)0);
+      P=pitchPPara;
+      I=pitchIPara;
+      D=pitchDPara;
+    }
+    else if (n==1)
+    {
+      serial_data.time_stamp = ((uint32_t)1);
+      P=rollPPara;
+      I=rollIPara;
+      D=rollDPara;
+    }
+    else
+    {
+      serial_data.time_stamp = ((uint32_t)2);
+      P=yawPPara;
+      I=yawIPara;
+      D=yawDPara;
+    }
+    serial_data.end1 = '\r';
+    serial_data.end2 = '\n';
+    serial_data.yaw = (float)P;
+    serial_data.roll = (float)I;
+    serial_data.pitch = (float)D;
+    for(int i=0;i<2;i++)
+    {
+      SerialPrintTransmit(&serial_data);
+      HAL_Delay(50);
+    }
+    n++;
   }
 
   /* Number of ticks per millisecond */
@@ -178,12 +213,17 @@ int main(void)
     if(uart3_it.is_compelete){
       uart3_it.is_compelete = 0;
       // updateEncoder(&roll_encoder);
-      serial_data.time_stamp = uart3_it.data.time_stamp;
-      serial_data.yaw = uart3_it.data.yaw;
-      serial_data.roll = uart3_it.data.roll;
-      serial_data.pitch = uart3_it.data.pitch;
-      SerialPrintTransmit(&serial_data);
-      printf("transmited_to_client");
+      motor_num= uart3_it.data.time_stamp;
+      if(sendpid(motor_num,&uart3_it.data.yaw,&uart3_it.data.roll,&uart3_it.data.pitch))
+      {
+        serial_data.time_stamp = uart3_it.data.time_stamp;
+        serial_data.yaw = uart3_it.data.yaw;
+        serial_data.roll = uart3_it.data.roll;
+        serial_data.pitch = uart3_it.data.pitch;
+        SerialPrintTransmit(&serial_data);
+        printf("transmited_to_client\r\n");
+      }
+      printf("transmited_to_client\r\n");
       HAL_GPIO_TogglePin(GPIOB,GPIO_PIN_12);
     }
     //PB12 Led0 green
@@ -321,7 +361,35 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-
+int sendpid(int motornum,float *get_P, float *get_I, float *get_D)
+{
+  static int PID_transmit_complete=0;
+  PID_transmit_complete=0;
+  if(motornum==0)
+  {
+      pitchPPara=*get_P;
+      pitchIPara=*get_I;
+      pitchDPara=*get_D;
+      printf("storm_pitch:P:%f,I:%f,D:%f\r\n",pitchPPara,pitchIPara,pitchDPara);
+  }
+  else if(motornum==1)
+  {
+      rollPPara=*get_P;
+      rollIPara=*get_I;
+      rollDPara=*get_D;
+      printf("storm_roll:P:%f,I:%f,D:%f\r\n",rollPPara,rollIPara,rollDPara);
+  }
+  else
+  {
+      yawPPara=*get_P;
+      yawIPara=*get_I;
+      yawDPara=*get_D;
+      printf("storm_yaw:P:%f,I:%f,D:%f\r\n",yawPPara,yawIPara,yawDPara);
+  }
+  
+  PID_transmit_complete=1;
+  return PID_transmit_complete;
+}
 /* USER CODE END 4 */
 
 /**
